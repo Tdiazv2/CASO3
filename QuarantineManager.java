@@ -24,6 +24,7 @@ public class QuarantineManager extends Thread {
             // corre cada segundo
             try {
                 Thread.sleep(1000); // espera semiactiva
+                System.out.println(getName() + " revisa cuarentena...");
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
@@ -34,10 +35,12 @@ public class QuarantineManager extends Thread {
             for (Message m : ready) {
                 if (m.getType() == Message.MessageType.END) {
                     // señal de que cuarentena debe cerrar
+                    System.out.println(getName() + " recibió END de cuarentena.");
                     globalControl.markQuarantineEnded();
                     running = false;
                 } else {
                     // pasar mensaje "limpio" al buzón de entrega
+                    System.out.println(getName() + " libera " + m + " de cuarentena -> entrega.");
                     deliveryMailbox.put(m);
                 }
             }
@@ -46,6 +49,9 @@ public class QuarantineManager extends Thread {
             if (globalControl.isQuarantineEnded()) {
                 running = false;
             }
+
+            Thread.yield(); // permitir a otros hilos avanzar
+
         }
 
         System.out.println(getName() + " terminó (manejador de cuarentena).");

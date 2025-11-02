@@ -54,10 +54,8 @@ public class Message {
 
     @Override
     public String toString() {
-        return "[Message " + id +
-               " type=" + type +
-               " spam=" + isSpam +
-               " ttl=" + quarantineTTL +
-               "]";
+        return String.format("[%s | client=%d | id=%s | spam=%s | TTL=%d]",
+                type, senderClientId, id, isSpam, quarantineTTL);
     }
+
 }

@@ -15,6 +15,8 @@ public class ClientSender extends Thread {
 
     @Override
     public void run() {
+        System.out.println(getName() + " inició envío.");
+
         // START
         Message startMsg = new Message(
                 Message.MessageType.START,
@@ -23,10 +25,11 @@ public class ClientSender extends Thread {
                 false
         );
         inputMailbox.put(startMsg);
+        System.out.println(getName() + " envió START.");
 
         // correos normales
         for (int i = 1; i <= messagesToGenerate; i++) {
-            boolean spamFlag = Math.random() < 0.3; // ej 30% prob spam
+            boolean spamFlag = Math.random() < 0.3;
             Message normal = new Message(
                     Message.MessageType.NORMAL,
                     "cliente" + clientId + "-msg" + i,
@@ -34,6 +37,8 @@ public class ClientSender extends Thread {
                     spamFlag
             );
             inputMailbox.put(normal);
+            System.out.println(getName() + " envió " + normal);
+            Thread.yield(); // ceder CPU para permitir que los filtros actúen
         }
 
         // END
@@ -44,7 +49,6 @@ public class ClientSender extends Thread {
                 false
         );
         inputMailbox.put(endMsg);
-
-        System.out.println(getName() + " terminó de enviar sus mensajes.");
+        System.out.println(getName() + " envió END y terminó.");
     }
 }

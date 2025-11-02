@@ -13,8 +13,8 @@ public class InputMailbox {
     // Productor: Cliente emisor
     public synchronized void put(Message msg) {
         while (queue.size() >= capacity) {
-            // buzón lleno -> espera pasiva
             try {
+                System.out.println(Thread.currentThread().getName() + " espera (buzón lleno).");
                 wait();
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
@@ -22,15 +22,15 @@ public class InputMailbox {
             }
         }
         queue.add(msg);
-        // despierta a un consumidor (filtro)
+        System.out.println(Thread.currentThread().getName() + " insertó " + msg);
         notify();
     }
 
     // Consumidor: Filtro
     public synchronized Message take() {
         while (queue.isEmpty()) {
-            // buzón vacío -> espera pasiva
             try {
+                System.out.println(Thread.currentThread().getName() + " espera (buzón vacío).");
                 wait();
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
@@ -38,7 +38,7 @@ public class InputMailbox {
             }
         }
         Message m = queue.poll();
-        // despierta a un productor (cliente) si estaba bloqueado por capacidad
+        System.out.println(Thread.currentThread().getName() + " tomó " + m);
         notify();
         return m;
     }

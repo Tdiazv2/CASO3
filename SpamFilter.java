@@ -62,9 +62,11 @@ public class SpamFilter extends Thread {
         if (msg.isSpam()) {
             // mensaje va a cuarentena con TTL aleatorio [10000..20000]
             msg.setQuarantineTTL(10000 + (int)(Math.random() * 10001));
+            System.out.println(getName() + " detectó SPAM " + msg + " (TTL=" + msg.getQuarantineTTL() + ")");
             quarantineMailbox.add(msg);
         } else {
             // mensaje válido -> va al buzón de entrega
+            System.out.println(getName() + " aprobó " + msg + " -> entrega");
             deliveryMailbox.put(msg);
         }
     }
@@ -106,6 +108,7 @@ public class SpamFilter extends Thread {
                         // marcar que ya enviamos el END global
                         globalControl.markDeliveryFinalEndSent();
                         deliveryMailbox.markBroadcastFinalEnd();
+                        System.out.println(getName() + " envió GLOBAL_END al buzón de entrega");
                     }
                 }
             }
