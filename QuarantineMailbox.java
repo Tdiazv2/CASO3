@@ -4,7 +4,7 @@ import java.util.List;
 /**
  * Buzón de cuarentena para mensajes SPAM.
  *
- * Este método revisa todos los mensajes actualmente en cuarentena y decide:
+ * Este metodo revisa todos los mensajes actualmente en cuarentena y decide:
  * 1. Reducir el TTL de cada mensaje.
  * 2. Si el mensaje ya expiró (TTL ≤ 0), enviarlo a entrega o descartarlo.
  * 3. Si el mensaje es de tipo END, también debe ser enviado.

@@ -26,7 +26,7 @@ public class SpamFilter extends Thread {
 
         while (running) {
             // tomar mensaje del buzón de entrada (bloquea si vacío)
-            Message msg = inputMailbox.take(); // este take devuelve null si todo terminó
+            Message msg = inputMailbox.take(); // este take devuelve null si finalizo
             if (msg != null) {
                 switch (msg.getType()) {
                     case START:
