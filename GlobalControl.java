@@ -40,9 +40,7 @@ public class GlobalControl {
 
     // condición de "ya todo acabó"
     public synchronized boolean systemCanShutdown() {
-        return allClientsFinished()
-                && finalEndSentToDelivery
-                && quarantineEnded;
+        return allClientsFinished() && finalEndSentToDelivery && quarantineEnded;
     }
 
     public synchronized boolean isQuarantineEndSent() {
@@ -51,6 +49,7 @@ public class GlobalControl {
 
     public synchronized void markQuarantineEndSent() {
         quarantineEndSent = true;
+        notifyAll();
     }
 }
 
