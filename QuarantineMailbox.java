@@ -8,7 +8,6 @@ import java.util.List;
  * 2. Si el mensaje ya expiró (TTL ≤ 0), enviarlo a entrega o descartarlo.
  * 3. Si el mensaje es de tipo END, también debe ser enviado.
  * 4. Remover todos los mensajes procesados del buzón.
- *
  * Con esto se garantiza que el buzón quede vacío después de procesar todos los mensajes listos.
  */
 public class QuarantineMailbox {
@@ -58,19 +57,14 @@ public class QuarantineMailbox {
 
         // Eliminar todos los mensajes procesados de la cuarentena
         quarantined.removeAll(toRemove);
-        ready.add(endMsg);
+        // 5. Procesar END al final (solo si realmente existía)
+        if (endMsg != null) {
+            ready.add(endMsg);
+        }
         return ready;
     }
 
     public synchronized boolean isEmpty() {
         return quarantined.isEmpty();
-    }
-
-    public synchronized int getSize() {
-        return quarantined.size();
-    }
-
-    public synchronized boolean isEnd() {
-        return quarantined.getFirst().getType() == Message.MessageType.END;
     }
 }
