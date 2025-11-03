@@ -30,6 +30,7 @@ public class GlobalControl {
     public synchronized void markQuarantineEnded() {
         quarantineEnded = true;
         notifyAll();
+
     }
 
     public synchronized boolean isQuarantineEnded() {

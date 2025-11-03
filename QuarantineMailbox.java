@@ -1,56 +1,64 @@
 import java.util.LinkedList;
 import java.util.List;
 
+/**
+ * Buzón de cuarentena para mensajes SPAM.
+ *
+ * Este método revisa todos los mensajes actualmente en cuarentena y decide:
+ * 1. Reducir el TTL de cada mensaje.
+ * 2. Si el mensaje ya expiró (TTL ≤ 0), enviarlo a entrega o descartarlo.
+ * 3. Si el mensaje es de tipo END, también debe ser enviado.
+ * 4. Remover todos los mensajes procesados del buzón.
+ *
+ * Con esto se garantiza que el buzón quede vacío después de procesar todos los mensajes listos.
+ */
 public class QuarantineMailbox {
 
-    // lista de mensajes actualmente en cuarentena
     private final List<Message> quarantined = new LinkedList<>();
 
+    // Añadir mensaje a cuarentena
     public synchronized void add(Message msg) {
         quarantined.add(msg);
-        // no usamos notify porque el manejador hace polling cada segundo
     }
 
     /**
-     * Llamado por el manejador de cuarentena una vez por "ciclo".
-     * Hace:
-     *  - Decrementar TTL
-     *  - Decidir si descarta (malicioso)
-     *  - Mover mensajes listos al buzón de entrega
-     *  - Detectar END
+     * Revisa la cuarentena y devuelve los mensajes listos para salir.
      *
-     * Devuelve la lista de mensajes que deben salir a buzón de entrega.
-     * También devuelve ENDs, para que el manejador pueda saber que debe terminar.
+     * @return lista de mensajes listos para enviar al buzón de entrega
      */
     public synchronized List<Message> reviewAndCollectReady() {
-        List<Message> ready = new LinkedList<>();
-        List<Message> toRemove = new LinkedList<>();
+        List<Message> ready = new LinkedList<>();  // mensajes listos para entrega
+        List<Message> toRemove = new LinkedList<>(); // mensajes a eliminar de cuarentena
 
         for (Message m : quarantined) {
-            // bajar TTL
+
+            // 1. Reducir TTL
             m.tickTTL();
 
+            // 2. Mensajes de tipo END se agregan a la lista de salida
             if (m.getType() == Message.MessageType.END) {
-                // El manejador sabrá que esto es señal de fin
                 ready.add(m);
-                toRemove.add(m);
-                continue;
-            }
 
-            // decidir descarte malicioso:
-            // random 1..21, si múltiplo de 7 => descartar
-            int r = 1 + (int)(Math.random() * 21);
-            boolean discard = (r % 7 == 0);
+                // 3. Mensajes normales o SPAM expiran
+            } else if (m.isTTLExpired()) {
+                // Decidir si descartar mensaje (aleatorio para simular malicioso)
+                int r = 1 + (int)(Math.random() * 21);
+                boolean discard = (r % 7 == 0);
 
-            if (m.isTTLExpired()) {
                 if (!discard) {
-                    ready.add(m); // listo para pasar a entrega
+                    ready.add(m); // mensaje listo para entrega
+                } else {
+                    System.out.println("Mensaje descartado: " + m);
                 }
-                toRemove.add(m);
             }
+
+            // 4. En cualquier caso, el mensaje ya fue procesado -> se elimina del buzón
+            toRemove.add(m);
         }
 
+        // Eliminar todos los mensajes procesados de la cuarentena
         quarantined.removeAll(toRemove);
+
         return ready;
     }
 

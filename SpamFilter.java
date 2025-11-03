@@ -4,17 +4,20 @@ public class SpamFilter extends Thread {
     private final QuarantineMailbox quarantineMailbox;
     private final DeliveryMailbox deliveryMailbox;
     private final GlobalControl globalControl;
+    private final int numDeliveryServers;
 
     public SpamFilter(int id,
                       InputMailbox inputMailbox,
                       QuarantineMailbox quarantineMailbox,
                       DeliveryMailbox deliveryMailbox,
-                      GlobalControl globalControl) {
+                      GlobalControl globalControl,
+                      int numDeliveryServers) {
         super("SpamFilter-" + id);
         this.inputMailbox = inputMailbox;
         this.quarantineMailbox = quarantineMailbox;
         this.deliveryMailbox = deliveryMailbox;
         this.globalControl = globalControl;
+        this.numDeliveryServers = numDeliveryServers;
     }
 
     @Override
@@ -23,31 +26,29 @@ public class SpamFilter extends Thread {
 
         while (running) {
             // tomar mensaje del buzón de entrada (bloquea si vacío)
-            Message msg = inputMailbox.take();
-            if (msg == null) {
-                continue; // hilo pudo ser interrumpido
+            Message msg = inputMailbox.take(); // este take devuelve null si todo terminó
+            if (msg != null) {
+                switch (msg.getType()) {
+                    case START:
+                        System.out.println(getName() +
+                                " vio START de cliente " + msg.getSenderClientId());
+                        deliveryMailbox.put(msg); // START va directo a entrega
+                        break;
+
+                    case NORMAL:
+                        handleNormal(msg);
+                        break;
+
+                    case END:
+                        handleEnd(msg);
+                        break;
+                }
             }
 
-            switch (msg.getType()) {
-                case START:
-                    // START no es spam
-                    System.out.println(getName() +
-                        " vio START de cliente " + msg.getSenderClientId());
-                    break;
-
-                case NORMAL:
-                    handleNormal(msg);
-                    break;
-
-                case END:
-                    handleEnd(msg);
-                    break;
-            }
-
-            // ¿Podemos ya mandar el END global al buzón de entrega?
+            // Intentar enviar END global (solo una vez)
             maybeSendGlobalEnd();
 
-            // ¿Ya podemos apagar este filtro?
+            // Verificar si ya se puede apagar el filtro
             synchronized (globalControl) {
                 if (globalControl.systemCanShutdown()) {
                     running = false;
@@ -60,22 +61,19 @@ public class SpamFilter extends Thread {
 
     private void handleNormal(Message msg) {
         if (msg.isSpam()) {
-            // mensaje va a cuarentena con TTL aleatorio [10000..20000]
-            msg.setQuarantineTTL(10000 + (int)(Math.random() * 10001));
+            msg.setQuarantineTTL(10000 + (int) (Math.random() * 10001)); // TTL 10000-20000
             System.out.println(getName() + " detectó SPAM " + msg + " (TTL=" + msg.getQuarantineTTL() + ")");
             quarantineMailbox.add(msg);
         } else {
-            // mensaje válido -> va al buzón de entrega
             System.out.println(getName() + " aprobó " + msg + " -> entrega");
             deliveryMailbox.put(msg);
         }
     }
 
     private void handleEnd(Message msg) {
-        // Registrar que este cliente ya terminó
         globalControl.registerClientEnd();
 
-        // Enviar END a cuarentena para que eventualmente se cierre
+        // enviar END a cuarentena para que eventualmente se cierre
         Message quarantineEnd = new Message(
                 Message.MessageType.END,
                 "END-from-cliente" + msg.getSenderClientId(),
@@ -87,30 +85,27 @@ public class SpamFilter extends Thread {
     }
 
     private void maybeSendGlobalEnd() {
-        synchronized (globalControl) {
-            if (!globalControl.allClientsFinished()) return;
-            synchronized (inputMailbox) {
-                synchronized (quarantineMailbox) {
-                    synchronized (deliveryMailbox) {
-                        if (!inputMailbox.isEmpty()) return;
-                        if (!quarantineMailbox.isEmpty()) return;
-                        if (globalControl.isDeliveryFinalEndSent()) return;
+        synchronized (globalControl) { // sincronizamos solo el estado global
+            if (globalControl.isDeliveryFinalEndSent() || !globalControl.allClientsFinished()) {
+                return; // ya enviado o no todos los clientes terminaron
+            }
 
-                        // crear END global para los servidores de entrega
-                        Message finalEnd = new Message(
-                                Message.MessageType.END,
-                                "GLOBAL_END",
-                                -1,
-                                false
-                        );
-                        deliveryMailbox.put(finalEnd);
-
-                        // marcar que ya enviamos el END global
-                        globalControl.markDeliveryFinalEndSent();
-                        deliveryMailbox.markBroadcastFinalEnd();
-                        System.out.println(getName() + " envió GLOBAL_END al buzón de entrega");
-                    }
+            // Verificamos buzones
+            if (inputMailbox.isEmpty()){// && quarantineMailbox.isEmpty()) {
+                Message finalEnd = new Message(
+                        Message.MessageType.END,
+                        "GLOBAL_END",
+                        -1,
+                        false
+                );
+                for (int i = 0; i < numDeliveryServers; i++) {
+                    deliveryMailbox.put(finalEnd);
                 }
+
+                // marcar que ya enviamos el END global
+                globalControl.markDeliveryFinalEndSent();
+                deliveryMailbox.markBroadcastFinalEnd();
+                System.out.println(getName() + " envió GLOBAL_END al buzón de entrega");
             }
         }
     }

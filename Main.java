@@ -44,10 +44,10 @@ public class Main {
         System.out.println("=============================\n");
 
         // 2. Crear recursos compartidos
-        InputMailbox inputMailbox = new InputMailbox(inputCapacity);
         QuarantineMailbox quarantineMailbox = new QuarantineMailbox();
         DeliveryMailbox deliveryMailbox = new DeliveryMailbox(deliveryCapacity);
         GlobalControl globalControl = new GlobalControl(numClients);
+        InputMailbox inputMailbox = new InputMailbox(inputCapacity, globalControl);
 
         // 3. Crear hilos
         List<Thread> threads = new ArrayList<>();
@@ -60,9 +60,10 @@ public class Main {
 
         // Filtros de spam
         for (int i = 0; i < numSpamFilters; i++) {
-            Thread t = new SpamFilter(i, inputMailbox, quarantineMailbox, deliveryMailbox, globalControl);
+            Thread t = new SpamFilter(i, inputMailbox, quarantineMailbox, deliveryMailbox, globalControl, numDeliveryServers);
             threads.add(t);
         }
+
 
         // Manejador de cuarentena (solo uno en el enunciado)
         Thread quarantineManager = new QuarantineManager(quarantineMailbox, deliveryMailbox, globalControl);

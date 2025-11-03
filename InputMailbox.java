@@ -6,8 +6,11 @@ public class InputMailbox {
     private final Queue<Message> queue = new LinkedList<>();
     private final int capacity;
 
-    public InputMailbox(int capacity) {
+    private final GlobalControl globalControl;
+
+    public InputMailbox(int capacity, GlobalControl globalControl) {
         this.capacity = capacity;
+        this.globalControl = globalControl;
     }
 
     // Productor: Cliente emisor
@@ -23,12 +26,12 @@ public class InputMailbox {
         }
         queue.add(msg);
         System.out.println(Thread.currentThread().getName() + " insertó " + msg);
-        notify();
+        notifyAll();
     }
 
     // Consumidor: Filtro
     public synchronized Message take() {
-        while (queue.isEmpty()) {
+        while (queue.isEmpty() && !globalControl.allClientsFinished()) {
             try {
                 System.out.println(Thread.currentThread().getName() + " espera (buzón vacío).");
                 wait();
@@ -37,9 +40,15 @@ public class InputMailbox {
                 return null;
             }
         }
+
+        if (queue.isEmpty()) {
+            // no hay más mensajes y el sistema terminó
+            return null;
+        }
+
         Message m = queue.poll();
         System.out.println(Thread.currentThread().getName() + " tomó " + m);
-        notify();
+        notifyAll();
         return m;
     }
 
