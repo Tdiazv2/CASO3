@@ -71,18 +71,27 @@ public class SpamFilter extends Thread {
     }
 
     private void handleEnd(Message msg) {
+        // Registrar que este cliente terminó
         globalControl.registerClientEnd();
 
-        // enviar END a cuarentena para que eventualmente se cierre
-        Message quarantineEnd = new Message(
-                Message.MessageType.END,
-                "END-from-cliente" + msg.getSenderClientId(),
-                msg.getSenderClientId(),
-                false
-        );
-        quarantineEnd.setQuarantineTTL(0);
-        quarantineMailbox.add(quarantineEnd);
+        // Solo enviar END a cuarentena cuando TODOS los clientes hayan terminado
+        synchronized (globalControl) {
+            if (globalControl.allClientsFinished() && !globalControl.isQuarantineEndSent()) {
+                Message quarantineEnd = new Message(
+                        Message.MessageType.END,
+                        "END-TO-QUARANTINE",
+                        msg.getSenderClientId(),
+                        false
+                );
+                quarantineEnd.setQuarantineTTL(0);
+                quarantineMailbox.add(quarantineEnd);
+
+                globalControl.markQuarantineEndSent();
+                System.out.println(getName() + " envió único END a cuarentena.");
+            }
+        }
     }
+
 
     private void maybeSendGlobalEnd() {
         synchronized (globalControl) { // sincronizamos solo el estado global
@@ -91,7 +100,7 @@ public class SpamFilter extends Thread {
             }
 
             // Verificamos buzones
-            if (inputMailbox.isEmpty()){// && quarantineMailbox.isEmpty()) {
+            if (inputMailbox.isEmpty()) {
                 Message finalEnd = new Message(
                         Message.MessageType.END,
                         "GLOBAL_END",

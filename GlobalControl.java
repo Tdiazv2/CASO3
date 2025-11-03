@@ -4,6 +4,7 @@ public class GlobalControl {
     private int finishedClients = 0;
     private boolean finalEndSentToDelivery = false;
     private boolean quarantineEnded = false;
+    private boolean quarantineEndSent = false;
 
     public GlobalControl(int totalClients) {
         this.totalClients = totalClients;
@@ -42,6 +43,14 @@ public class GlobalControl {
         return allClientsFinished()
                 && finalEndSentToDelivery
                 && quarantineEnded;
+    }
+
+    public synchronized boolean isQuarantineEndSent() {
+        return quarantineEndSent;
+    }
+
+    public synchronized void markQuarantineEndSent() {
+        quarantineEndSent = true;
     }
 }
 

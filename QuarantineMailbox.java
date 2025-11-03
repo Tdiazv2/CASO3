@@ -29,6 +29,7 @@ public class QuarantineMailbox {
         List<Message> ready = new LinkedList<>();  // mensajes listos para entrega
         List<Message> toRemove = new LinkedList<>(); // mensajes a eliminar de cuarentena
 
+        Message endMsg = null;
         for (Message m : quarantined) {
 
             // 1. Reducir TTL
@@ -36,7 +37,7 @@ public class QuarantineMailbox {
 
             // 2. Mensajes de tipo END se agregan a la lista de salida
             if (m.getType() == Message.MessageType.END) {
-                ready.add(m);
+                endMsg = m;
 
                 // 3. Mensajes normales o SPAM expiran
             } else if (m.isTTLExpired()) {
@@ -57,11 +58,19 @@ public class QuarantineMailbox {
 
         // Eliminar todos los mensajes procesados de la cuarentena
         quarantined.removeAll(toRemove);
-
+        ready.add(endMsg);
         return ready;
     }
 
     public synchronized boolean isEmpty() {
         return quarantined.isEmpty();
+    }
+
+    public synchronized int getSize() {
+        return quarantined.size();
+    }
+
+    public synchronized boolean isEnd() {
+        return quarantined.getFirst().getType() == Message.MessageType.END;
     }
 }

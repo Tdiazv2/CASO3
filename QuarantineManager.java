@@ -45,7 +45,8 @@ public class QuarantineManager extends Thread {
             }
 
             // seguridad: si ya marcamos fin de cuarentena, apagamos
-            if (globalControl.isQuarantineEnded()) {
+            //System.out.println(quarantineMailbox);
+            if (globalControl.isQuarantineEnded() && quarantineMailbox.isEmpty()) {
                 running = false;
             }
 
